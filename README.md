@@ -11,6 +11,12 @@ Sistema de registro y control de marcas horarias (entradas y salidas) desarrolla
 - 💾 Persistencia local con SQLite
 - 🎨 Interfaz web moderna y responsive
 - 🔌 API REST completa con documentación automática
+- ✅ Navegar semana por semana con las flechas
+- ✅ Saltar a cualquier fecha con el selector
+- ✅ Volver rápido a hoy con el botón "Hoy"
+- ✅ Se muestra el rango exacto de la semana (Lun X - Dom Y)
+- ✅ Persiste la navegación mientras no recargues la página
+- ✅ Actualización automática cuando volvés a "Hoy" tras registrar marcas
 
 ## 🚀 Instalación y Ejecución
 
