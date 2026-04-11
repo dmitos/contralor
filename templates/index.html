@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Horario - UdelaR</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="container">
+            <h1>🕐 Control Horario UdelaR</h1>
+            <p>Sistema de registro de marcas de entrada y salida</p>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="container">
+        
+        <!-- Alerta (inicialmente oculta) -->
+        <div id="alerta" style="display: none;"></div>
+
+        <!-- Formulario de Registro -->
+        <div class="card">
+            <h2 class="card-title" id="tituloFormulario">➕ Registrar Nueva Marca</h2>
+            
+            <form id="formMarca">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fecha" class="form-label">Fecha</label>
+                        <input 
+                            type="date" 
+                            id="fecha" 
+                            name="fecha" 
+                            class="form-input" 
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tipo" class="form-label">Tipo de Marca</label>
+                        <select id="tipo" name="tipo" class="form-select" required>
+                            <option value="ENTRADA">🟢 Entrada</option>
+                            <option value="SALIDA">🔴 Salida</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hora" class="form-label">Hora</label>
+                        <input 
+                            type="time" 
+                            id="hora" 
+                            name="hora" 
+                            class="form-input" 
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="observacion" class="form-label">Observación (opcional)</label>
+                    <textarea 
+                        id="observacion" 
+                        name="observacion" 
+                        class="form-textarea" 
+                        placeholder="Ej: Reunión fuera de oficina, llegada tardía, etc."
+                        maxlength="500"
+                    ></textarea>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem;">
+                    <button type="submit" class="btn btn-primary" id="btnSubmit">
+                        ✅ Registrar Marca
+                    </button>
+                    <button 
+                        type="button" 
+                        class="btn btn-danger" 
+                        id="btnCancelarEdicion"
+                        style="display: none;"
+                    >
+                        ❌ Cancelar Edición
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Lista de Marcas -->
+        <div class="card">
+            <h2 class="card-title">📋 Historial de Marcas</h2>
+            
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Cargando marcas...</p>
+            </div>
+
+            <!-- Tabla -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;"></th>
+                            <th>Tipo</th>
+                            <th>Hora</th>
+                            <th>Observación</th>
+                            <th>Registrado</th>
+                            <th style="width: 150px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaMarcas">
+                        <!-- Se llena dinámicamente con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; margin-top: 3rem; padding: 2rem 0; color: #64748b; font-size: 0.875rem;">
+            <p>
+                Control Horario UdelaR v1.0.0 
+                <span style="margin: 0 0.5rem;">•</span>
+                <a href="/api/docs" target="_blank" style="color: #2563eb; text-decoration: none;">
+                    📚 Documentación API
+                </a>
+            </p>
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

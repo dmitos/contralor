@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  control-horario:
+    build: .
+    container_name: control_horario_app
+    ports:
+      - "8200:8200"
+    volumes:
+      # Persistir la base de datos SQLite
+      - ./data:/app/data
+      # Opcional: montar archivos para desarrollo (comentar en producción)
+      # - ./main.py:/app/main.py
+      # - ./database:/app/database
+      # - ./routers:/app/routers
+      # - ./schemas:/app/schemas
+      # - ./services:/app/services
+      # - ./static:/app/static
+      # - ./templates:/app/templates
+    environment:
+      - TZ=America/Montevideo
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8200/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+# Volumen para persistir la base de datos
+volumes:
+  db-data:
+    driver: local
