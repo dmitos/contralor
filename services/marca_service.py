@@ -10,7 +10,7 @@ from sqlalchemy import and_, func
 from database.models import Marca
 from schemas.marca import MarcaCreate, MarcaUpdate, MarcasPorDia
 from datetime import date, datetime, time, timedelta
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
 
 
 class MarcaService:
@@ -244,3 +244,187 @@ class MarcaService:
             ))
         
         return resultado
+    
+    @staticmethod
+    def obtener_inicio_semana(fecha: date) -> date:
+        """
+        Obtiene el lunes de la semana de la fecha dada.
+        
+        Args:
+            fecha: Fecha de referencia
+            
+        Returns:
+            Fecha del lunes de esa semana
+        """
+        # weekday(): Lunes=0, Domingo=6
+        dias_desde_lunes = fecha.weekday()
+        inicio_semana = fecha - timedelta(days=dias_desde_lunes)
+        return inicio_semana
+    
+    @staticmethod
+    def obtener_fin_semana(fecha: date) -> date:
+        """
+        Obtiene el domingo de la semana de la fecha dada.
+        
+        Args:
+            fecha: Fecha de referencia
+            
+        Returns:
+            Fecha del domingo de esa semana
+        """
+        inicio = MarcaService.obtener_inicio_semana(fecha)
+        fin_semana = inicio + timedelta(days=6)
+        return fin_semana
+    
+    @staticmethod
+    def calcular_horas_semana(db: Session, fecha_referencia: Optional[date] = None) -> Dict:
+        """
+        Calcula las horas trabajadas en la semana de la fecha de referencia.
+        
+        Args:
+            db: Sesión de base de datos
+            fecha_referencia: Fecha de referencia (default: hoy)
+            
+        Returns:
+            Diccionario con estadísticas de la semana:
+            {
+                'fecha_inicio': fecha del lunes,
+                'fecha_fin': fecha del domingo,
+                'horas_trabajadas': "HH:MM",
+                'horas_trabajadas_decimal': float,
+                'horas_requeridas': 43.0,
+                'diferencia': "HH:MM" (positivo o negativo),
+                'diferencia_decimal': float,
+                'porcentaje_completado': float,
+                'dias_trabajados': int
+            }
+        """
+        if not fecha_referencia:
+            fecha_referencia = date.today()
+        
+        inicio_semana = MarcaService.obtener_inicio_semana(fecha_referencia)
+        fin_semana = MarcaService.obtener_fin_semana(fecha_referencia)
+        
+        # Obtener marcas de la semana
+        marcas = MarcaService.obtener_marcas_rango_fechas(db, inicio_semana, fin_semana)
+        
+        # Agrupar por día y calcular horas
+        marcas_por_dia = {}
+        for marca in marcas:
+            if marca.fecha not in marcas_por_dia:
+                marcas_por_dia[marca.fecha] = []
+            marcas_por_dia[marca.fecha].append(marca)
+        
+        # Calcular total de segundos trabajados
+        total_segundos = 0
+        dias_trabajados = 0
+        
+        for fecha, marcas_dia in marcas_por_dia.items():
+            horas_dia = MarcaService.calcular_horas_dia(marcas_dia)
+            if horas_dia != "00:00":
+                dias_trabajados += 1
+                # Convertir HH:MM a segundos
+                partes = horas_dia.split(":")
+                segundos_dia = int(partes[0]) * 3600 + int(partes[1]) * 60
+                total_segundos += segundos_dia
+        
+        # Convertir a horas decimales
+        horas_decimales = total_segundos / 3600
+        
+        # Convertir a formato HH:MM
+        horas = int(total_segundos // 3600)
+        minutos = int((total_segundos % 3600) // 60)
+        horas_str = f"{horas:02d}:{minutos:02d}"
+        
+        # Calcular diferencia con las 43 horas requeridas
+        horas_requeridas = 43.0
+        diferencia_decimal = horas_decimales - horas_requeridas
+        diferencia_segundos = total_segundos - (int(horas_requeridas * 3600))
+        
+        # Convertir diferencia a HH:MM
+        signo = "+" if diferencia_segundos >= 0 else "-"
+        diferencia_abs = abs(diferencia_segundos)
+        diff_horas = int(diferencia_abs // 3600)
+        diff_minutos = int((diferencia_abs % 3600) // 60)
+        diferencia_str = f"{signo}{diff_horas:02d}:{diff_minutos:02d}"
+        
+        # Porcentaje completado
+        porcentaje = (horas_decimales / horas_requeridas * 100) if horas_requeridas > 0 else 0
+        
+        return {
+            'fecha_inicio': inicio_semana,
+            'fecha_fin': fin_semana,
+            'horas_trabajadas': horas_str,
+            'horas_trabajadas_decimal': round(horas_decimales, 2),
+            'horas_requeridas': horas_requeridas,
+            'diferencia': diferencia_str,
+            'diferencia_decimal': round(diferencia_decimal, 2),
+            'porcentaje_completado': round(porcentaje, 1),
+            'dias_trabajados': dias_trabajados
+        }
+    
+    @staticmethod
+    def calcular_horas_mes(db: Session, fecha_referencia: Optional[date] = None) -> Dict:
+        """
+        Calcula las horas trabajadas en el mes de la fecha de referencia.
+        
+        Args:
+            db: Sesión de base de datos
+            fecha_referencia: Fecha de referencia (default: hoy)
+            
+        Returns:
+            Diccionario con estadísticas del mes
+        """
+        if not fecha_referencia:
+            fecha_referencia = date.today()
+        
+        # Primer y último día del mes
+        inicio_mes = fecha_referencia.replace(day=1)
+        
+        # Calcular último día del mes
+        if fecha_referencia.month == 12:
+            fin_mes = fecha_referencia.replace(year=fecha_referencia.year + 1, month=1, day=1) - timedelta(days=1)
+        else:
+            fin_mes = fecha_referencia.replace(month=fecha_referencia.month + 1, day=1) - timedelta(days=1)
+        
+        # Obtener marcas del mes
+        marcas = MarcaService.obtener_marcas_rango_fechas(db, inicio_mes, fin_mes)
+        
+        # Agrupar por día y calcular horas
+        marcas_por_dia = {}
+        for marca in marcas:
+            if marca.fecha not in marcas_por_dia:
+                marcas_por_dia[marca.fecha] = []
+            marcas_por_dia[marca.fecha].append(marca)
+        
+        # Calcular total de segundos trabajados
+        total_segundos = 0
+        dias_trabajados = 0
+        
+        for fecha, marcas_dia in marcas_por_dia.items():
+            horas_dia = MarcaService.calcular_horas_dia(marcas_dia)
+            if horas_dia != "00:00":
+                dias_trabajados += 1
+                partes = horas_dia.split(":")
+                segundos_dia = int(partes[0]) * 3600 + int(partes[1]) * 60
+                total_segundos += segundos_dia
+        
+        # Convertir a horas decimales
+        horas_decimales = total_segundos / 3600
+        
+        # Convertir a formato HH:MM
+        horas = int(total_segundos // 3600)
+        minutos = int((total_segundos % 3600) // 60)
+        horas_str = f"{horas:02d}:{minutos:02d}"
+        
+        return {
+            'mes': fecha_referencia.month,
+            'año': fecha_referencia.year,
+            'fecha_inicio': inicio_mes,
+            'fecha_fin': fin_mes,
+            'horas_trabajadas': horas_str,
+            'horas_trabajadas_decimal': round(horas_decimales, 2),
+            'dias_trabajados': dias_trabajados,
+            'promedio_diario': round(horas_decimales / dias_trabajados, 2) if dias_trabajados > 0 else 0
+        }
+
