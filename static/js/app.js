@@ -15,7 +15,8 @@ const API_BASE = '/api/marcas';
 const state = {
     marcas: [],
     marcasAgrupadas: [],
-    editandoId: null
+    editandoId: null,
+    estadisticasSemana: null
 };
 
 /**
@@ -33,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Cargar datos iniciales
     cargarMarcasAgrupadas();
+    cargarEstadisticasSemana();
 });
 
 /**
@@ -55,6 +57,72 @@ function mostrarAlerta(mensaje, tipo = 'success') {
 function toggleLoading(mostrar) {
     const loading = document.getElementById('loading');
     loading.style.display = mostrar ? 'block' : 'none';
+}
+
+/**
+ * Carga estadísticas de la semana actual
+ */
+async function cargarEstadisticasSemana() {
+    try {
+        const response = await fetch(`${API_BASE}/estadisticas/semana`);
+        
+        if (!response.ok) {
+            throw new Error('Error al cargar estadísticas');
+        }
+        
+        state.estadisticasSemana = await response.json();
+        renderizarEstadisticasSemana();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        // No mostrar alerta para no molestar si falla
+    }
+}
+
+/**
+ * Renderiza las estadísticas semanales
+ */
+function renderizarEstadisticasSemana() {
+    if (!state.estadisticasSemana) return;
+    
+    const stats = state.estadisticasSemana;
+    
+    // Actualizar valores
+    document.getElementById('horasTrabajadas').textContent = stats.horas_trabajadas;
+    document.getElementById('horasRequeridas').textContent = '43:00';
+    document.getElementById('diferencia').textContent = stats.diferencia;
+    document.getElementById('porcentaje').textContent = `${stats.porcentaje_completado}%`;
+    document.getElementById('diasTrabajados').textContent = stats.dias_trabajados;
+    
+    // Actualizar fechas de la semana
+    const fechaInicio = formatearFechaSemana(stats.fecha_inicio);
+    const fechaFin = formatearFechaSemana(stats.fecha_fin);
+    document.getElementById('rangoSemana').textContent = `${fechaInicio} - ${fechaFin}`;
+    
+    // Aplicar color según diferencia
+    const difElement = document.getElementById('diferencia');
+    const difCard = difElement.closest('.stat-card');
+    
+    if (stats.diferencia_decimal >= 0) {
+        difCard.style.borderLeftColor = 'var(--success-color)';
+        difElement.style.color = 'var(--success-color)';
+    } else {
+        difCard.style.borderLeftColor = 'var(--danger-color)';
+        difElement.style.color = 'var(--danger-color)';
+    }
+    
+    // Actualizar barra de progreso
+    const porcentaje = Math.min(stats.porcentaje_completado, 100);
+    const progressBar = document.getElementById('progressBar');
+    progressBar.style.width = `${porcentaje}%`;
+    
+    if (porcentaje >= 100) {
+        progressBar.style.backgroundColor = 'var(--success-color)';
+    } else if (porcentaje >= 80) {
+        progressBar.style.backgroundColor = 'var(--warning-color)';
+    } else {
+        progressBar.style.backgroundColor = 'var(--primary-color)';
+    }
 }
 
 /**
@@ -204,6 +272,7 @@ async function handleSubmitMarca(e) {
         document.getElementById('fecha').valueAsDate = new Date();
         cancelarEdicion();
         cargarMarcasAgrupadas();
+        cargarEstadisticasSemana(); // Recargar estadísticas
         
     } catch (error) {
         console.error('Error:', error);
@@ -276,6 +345,7 @@ async function eliminarMarca(id) {
         
         mostrarAlerta('🗑️ Marca eliminada correctamente', 'success');
         cargarMarcasAgrupadas();
+        cargarEstadisticasSemana(); // Recargar estadísticas
         
     } catch (error) {
         console.error('Error:', error);
@@ -292,6 +362,19 @@ function formatearFecha(fechaStr) {
         weekday: 'long', 
         year: 'numeric', 
         month: 'long', 
+        day: 'numeric' 
+    };
+    return fecha.toLocaleDateString('es-UY', opciones);
+}
+
+/**
+ * Formatea una fecha corta para rango de semana (ej: "Lun 6 Abr")
+ */
+function formatearFechaSemana(fechaStr) {
+    const fecha = new Date(fechaStr + 'T00:00:00');
+    const opciones = { 
+        weekday: 'short', 
+        month: 'short', 
         day: 'numeric' 
     };
     return fecha.toLocaleDateString('es-UY', opciones);
