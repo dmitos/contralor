@@ -101,6 +101,10 @@ control_horario/
 | DELETE | `/api/marcas/{id}` | Eliminar marca |
 | GET | `/api/marcas/fecha/{fecha}` | Marcas de una fecha |
 | GET | `/api/marcas/agrupadas` | Marcas agrupadas por día |
+| GET | `/api/marcas/estadisticas/semana` | Estadísticas de la semana actual |
+
+| GET | `/api/marcas/estadisticas/semana?fecha=2026-04-10` | Estadísticas de cualquier semana |
+| GET | `/api/marcas/estadisticas/mes` | Estadísticas del mes |
 
 ### Ejemplo de uso
 
