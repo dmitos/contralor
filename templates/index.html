@@ -27,32 +27,42 @@
                 <h2 class="card-title" style="margin: 0;">📊 Estadísticas de la Semana</h2>
                 
                 <!-- Controles de navegación de semana -->
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
                     <button 
                         onclick="cambiarSemana(-1)" 
                         class="btn btn-primary btn-small"
                         title="Semana anterior">
-                        ◀ Anterior
+                        ◀
                     </button>
                     
-                    <div style="display: flex; flex-direction: column; align-items: center;">
-                        <span id="rangoSemana" style="font-size: 0.875rem; color: #64748b; white-space: nowrap;">
+                    <div style="display: flex; flex-direction: column; align-items: center; min-width: 200px;">
+                        <span id="rangoSemana" style="font-size: 0.875rem; color: #1e293b; font-weight: 600; white-space: nowrap;">
                             Cargando...
                         </span>
-                        <button 
-                            onclick="irSemanaActual()" 
-                            class="btn btn-primary btn-small"
-                            style="margin-top: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem;"
-                            title="Ir a semana actual">
-                            📅 Hoy
-                        </button>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+                            <button 
+                                onclick="irSemanaActual()" 
+                                class="btn btn-primary btn-small"
+                                style="font-size: 0.75rem; padding: 0.25rem 0.5rem;"
+                                title="Ir a semana actual">
+                                📅 Hoy
+                            </button>
+                            <input 
+                                type="date" 
+                                id="selectorFechaSemana"
+                                class="form-input"
+                                style="font-size: 0.75rem; padding: 0.25rem 0.5rem; width: auto;"
+                                title="Ir a una semana específica"
+                                onchange="irSemanaEspecifica()"
+                            >
+                        </div>
                     </div>
                     
                     <button 
                         onclick="cambiarSemana(1)" 
                         class="btn btn-primary btn-small"
                         title="Semana siguiente">
-                        Siguiente ▶
+                        ▶
                     </button>
                 </div>
             </div>
