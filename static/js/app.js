@@ -16,7 +16,8 @@ const state = {
     marcas: [],
     marcasAgrupadas: [],
     editandoId: null,
-    estadisticasSemana: null
+    estadisticasSemana: null,
+    fechaReferenciaEstadisticas: null // null = semana actual
 };
 
 /**
@@ -64,7 +65,13 @@ function toggleLoading(mostrar) {
  */
 async function cargarEstadisticasSemana() {
     try {
-        const response = await fetch(`${API_BASE}/estadisticas/semana`);
+        // Construir URL con fecha de referencia si existe
+        let url = `${API_BASE}/estadisticas/semana`;
+        if (state.fechaReferenciaEstadisticas) {
+            url += `?fecha=${state.fechaReferenciaEstadisticas}`;
+        }
+        
+        const response = await fetch(url);
         
         if (!response.ok) {
             throw new Error('Error al cargar estadísticas');
@@ -400,6 +407,49 @@ function formatearDateTime(dateTimeStr) {
     });
 }
 
+/**
+ * Cambia la semana de referencia para las estadísticas
+ * @param {number} offset - Número de semanas a mover (-1 = anterior, +1 = siguiente)
+ */
+function cambiarSemana(offset) {
+    // Si no hay fecha de referencia, usar hoy
+    let fechaRef = state.fechaReferenciaEstadisticas 
+        ? new Date(state.fechaReferenciaEstadisticas + 'T00:00:00')
+        : new Date();
+    
+    // Mover 7 días por cada semana
+    fechaRef.setDate(fechaRef.getDate() + (offset * 7));
+    
+    // Guardar nueva fecha de referencia (formato YYYY-MM-DD)
+    state.fechaReferenciaEstadisticas = fechaRef.toISOString().split('T')[0];
+    
+    // Recargar estadísticas
+    cargarEstadisticasSemana();
+}
+
+/**
+ * Vuelve a la semana actual
+ */
+function irSemanaActual() {
+    state.fechaReferenciaEstadisticas = null;
+    document.getElementById('selectorFechaSemana').value = '';
+    cargarEstadisticasSemana();
+}
+
+/**
+ * Ir a una semana específica desde el selector de fecha
+ */
+function irSemanaEspecifica() {
+    const fecha = document.getElementById('selectorFechaSemana').value;
+    if (fecha) {
+        state.fechaReferenciaEstadisticas = fecha;
+        cargarEstadisticasSemana();
+    }
+}
+
 // Exponer funciones globalmente para los botones inline
 window.editarMarca = editarMarca;
 window.eliminarMarca = eliminarMarca;
+window.cambiarSemana = cambiarSemana;
+window.irSemanaActual = irSemanaActual;
+window.irSemanaEspecifica = irSemanaEspecifica;
