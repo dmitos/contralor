@@ -194,3 +194,52 @@ def eliminar_marca(
         raise HTTPException(status_code=404, detail=f"Marca con ID {marca_id} no encontrada")
     
     return None
+
+
+@router.get("/estadisticas/semana", response_model=dict)
+def obtener_estadisticas_semana(
+    fecha: Optional[date] = Query(None, description="Fecha de referencia (default: hoy)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene estadísticas de horas trabajadas en la semana.
+    
+    La semana se define de Lunes a Domingo.
+    Si no se especifica fecha, usa la semana actual.
+    
+    Args:
+        fecha: Fecha de referencia para calcular la semana (opcional)
+        db: Sesión de base de datos (inyectada)
+        
+    Returns:
+        Diccionario con estadísticas de la semana:
+        - fecha_inicio: Lunes de la semana
+        - fecha_fin: Domingo de la semana
+        - horas_trabajadas: Total en formato HH:MM
+        - horas_trabajadas_decimal: Total en decimal
+        - horas_requeridas: 43.0
+        - diferencia: Diferencia con las 43 horas (+/-HH:MM)
+        - porcentaje_completado: Porcentaje de cumplimiento
+        - dias_trabajados: Cantidad de días con registros
+    """
+    estadisticas = MarcaService.calcular_horas_semana(db, fecha)
+    return estadisticas
+
+
+@router.get("/estadisticas/mes", response_model=dict)
+def obtener_estadisticas_mes(
+    fecha: Optional[date] = Query(None, description="Fecha de referencia (default: hoy)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene estadísticas de horas trabajadas en el mes.
+    
+    Args:
+        fecha: Fecha de referencia para calcular el mes (opcional)
+        db: Sesión de base de datos (inyectada)
+        
+    Returns:
+        Diccionario con estadísticas del mes
+    """
+    estadisticas = MarcaService.calcular_horas_mes(db, fecha)
+    return estadisticas
