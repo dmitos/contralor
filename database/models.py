@@ -13,13 +13,14 @@ Base = declarative_base()
 
 class Marca(Base):
     """
-    Modelo para registrar las marcas de entrada/salida.
+    Modelo para registrar las marcas de entrada/salida y artículos.
     
     Attributes:
         id: Identificador único autoincremental
         fecha: Fecha de la marca (YYYY-MM-DD)
-        tipo: Tipo de marca - 'ENTRADA' o 'SALIDA'
-        hora: Hora de la marca (HH:MM:SS)
+        tipo: Tipo de marca - 'ENTRADA', 'SALIDA' o 'ART15'
+        hora: Hora de la marca (HH:MM:SS) - Para Art.15 se usa para almacenar las horas
+        horas_art15: Horas del artículo 15 (1.5, 2, 2.5, 3, 4) - Solo para tipo ART15
         observacion: Nota opcional sobre la marca
         created_at: Timestamp de creación del registro
         updated_at: Timestamp de última actualización
@@ -28,8 +29,9 @@ class Marca(Base):
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     fecha = Column(Date, nullable=False, index=True)
-    tipo = Column(String(10), nullable=False)  # 'ENTRADA' o 'SALIDA'
-    hora = Column(Time, nullable=False)
+    tipo = Column(String(10), nullable=False)  # 'ENTRADA', 'SALIDA' o 'ART15'
+    hora = Column(Time, nullable=True)  # Nullable para Art.15
+    horas_art15 = Column(Integer, nullable=True)  # Horas en minutos (90, 120, 150, 180, 240)
     observacion = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -95,6 +95,13 @@
                     <div class="stat-label">📅 Días Trabajados</div>
                     <div class="stat-value" id="diasTrabajados">0</div>
                 </div>
+                
+                <div class="stat-card" style="border-left-color: #d97706;">
+                    <div class="stat-label">⏰ Art. 15 Disponible</div>
+                    <div class="stat-value" id="art15Disponible" style="font-size: 1.5rem;">
+                        <span id="art15HorasDisponibles">0</span>h / 4h
+                    </div>
+                </div>
             </div>
 
             <!-- Leyenda -->
@@ -122,21 +129,33 @@
 
                     <div class="form-group">
                         <label for="tipo" class="form-label">Tipo de Marca</label>
-                        <select id="tipo" name="tipo" class="form-select" required>
+                        <select id="tipo" name="tipo" class="form-select" required onchange="toggleCamposSegunTipo()">
                             <option value="ENTRADA">🟢 Entrada</option>
                             <option value="SALIDA">🔴 Salida</option>
+                            <option value="ART15">⏰ Art. 15</option>
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" id="grupoHora">
                         <label for="hora" class="form-label">Hora</label>
                         <input 
                             type="time" 
                             id="hora" 
                             name="hora" 
-                            class="form-input" 
-                            required
+                            class="form-input"
                         >
+                    </div>
+                    
+                    <div class="form-group" id="grupoHorasArt15" style="display: none;">
+                        <label for="horasArt15" class="form-label">Horas Art. 15</label>
+                        <select id="horasArt15" name="horasArt15" class="form-select">
+                            <option value="">Seleccionar...</option>
+                            <option value="1.5">1.5 horas</option>
+                            <option value="2">2 horas</option>
+                            <option value="2.5">2.5 horas</option>
+                            <option value="3">3 horas</option>
+                            <option value="4">4 horas</option>
+                        </select>
                     </div>
                 </div>
 

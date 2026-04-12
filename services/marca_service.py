@@ -31,10 +31,16 @@ class MarcaService:
         Returns:
             Marca creada con su ID asignado
         """
+        # Convertir horas_art15 de decimal a minutos para almacenar
+        horas_art15_minutos = None
+        if marca_data.horas_art15 is not None:
+            horas_art15_minutos = int(marca_data.horas_art15 * 60)
+        
         nueva_marca = Marca(
             fecha=marca_data.fecha,
             tipo=marca_data.tipo,
             hora=marca_data.hora,
+            horas_art15=horas_art15_minutos,
             observacion=marca_data.observacion
         )
         db.add(nueva_marca)
@@ -169,8 +175,8 @@ class MarcaService:
     def calcular_horas_dia(marcas: List[Marca]) -> str:
         """
         Calcula las horas trabajadas en un día a partir de las marcas.
-        Asume que las marcas están ordenadas cronológicamente y alterna
-        entre ENTRADA y SALIDA.
+        Incluye horas de Art.15.
+        Asume que las marcas ENTRADA/SALIDA están ordenadas cronológicamente.
         
         Args:
             marcas: Lista de marcas del día (ordenadas por hora)
@@ -195,6 +201,9 @@ class MarcaService:
                 diferencia = dt_salida - dt_entrada
                 total_segundos += diferencia.total_seconds()
                 entrada_actual = None
+            elif marca.tipo == "ART15" and marca.horas_art15:
+                # Agregar las horas del artículo (almacenadas en minutos)
+                total_segundos += marca.horas_art15 * 60
         
         # Convertir segundos a formato HH:MM
         horas = int(total_segundos // 3600)
@@ -351,6 +360,12 @@ class MarcaService:
         # Porcentaje completado
         porcentaje = (horas_decimales / horas_requeridas * 100) if horas_requeridas > 0 else 0
         
+        # Calcular saldo Art.15 del mes (o meses) que abarca la semana
+        # Una semana puede abarcar dos meses, usamos el mes de la fecha de referencia
+        año_ref = fecha_referencia.year
+        mes_ref = fecha_referencia.month
+        saldo_art15 = MarcaService.calcular_saldo_art15_mes(db, año_ref, mes_ref)
+        
         return {
             'fecha_inicio': inicio_semana,
             'fecha_fin': fin_semana,
@@ -360,7 +375,8 @@ class MarcaService:
             'diferencia': diferencia_str,
             'diferencia_decimal': round(diferencia_decimal, 2),
             'porcentaje_completado': round(porcentaje, 1),
-            'dias_trabajados': dias_trabajados
+            'dias_trabajados': dias_trabajados,
+            'art15': saldo_art15  # Información del Art.15
         }
     
     @staticmethod
@@ -427,4 +443,65 @@ class MarcaService:
             'dias_trabajados': dias_trabajados,
             'promedio_diario': round(horas_decimales / dias_trabajados, 2) if dias_trabajados > 0 else 0
         }
+    
+    @staticmethod
+    def calcular_saldo_art15_mes(db: Session, año: int, mes: int) -> Dict:
+        """
+        Calcula el saldo de Art.15 para un mes específico.
+        
+        Args:
+            db: Sesión de base de datos
+            año: Año a consultar
+            mes: Mes a consultar (1-12)
+            
+        Returns:
+            Diccionario con:
+            - total_horas: 4.0 (cuota mensual)
+            - horas_usadas: Horas ya usadas en el mes
+            - horas_disponibles: Horas restantes
+            - usos: Lista de usos (fecha, horas)
+        """
+        # Primer y último día del mes
+        primer_dia = date(año, mes, 1)
+        if mes == 12:
+            ultimo_dia = date(año + 1, 1, 1) - timedelta(days=1)
+        else:
+            ultimo_dia = date(año, mes + 1, 1) - timedelta(days=1)
+        
+        # Obtener todos los Art.15 del mes
+        art15_mes = db.query(Marca)\
+            .filter(
+                and_(
+                    Marca.tipo == "ART15",
+                    Marca.fecha >= primer_dia,
+                    Marca.fecha <= ultimo_dia
+                )
+            )\
+            .order_by(Marca.fecha)\
+            .all()
+        
+        # Calcular horas usadas (convertir de minutos a horas)
+        horas_usadas = sum(marca.horas_art15 / 60 for marca in art15_mes if marca.horas_art15)
+        horas_disponibles = 4.0 - horas_usadas
+        
+        # Lista de usos
+        usos = [
+            {
+                'id': marca.id,
+                'fecha': marca.fecha,
+                'horas': marca.horas_art15 / 60 if marca.horas_art15 else 0,
+                'observacion': marca.observacion
+            }
+            for marca in art15_mes
+        ]
+        
+        return {
+            'año': año,
+            'mes': mes,
+            'total_horas': 4.0,
+            'horas_usadas': round(horas_usadas, 1),
+            'horas_disponibles': round(horas_disponibles, 1),
+            'usos': usos
+        }
+
 

@@ -215,6 +215,12 @@ body {
     color: #92400e;
 }
 
+.badge-art15 {
+    background-color: #fef3c7;
+    color: #d97706;
+    border: 1px solid #f59e0b;
+}
+
 /* Loading */
 .loading {
     text-align: center;

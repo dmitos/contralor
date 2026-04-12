@@ -243,3 +243,28 @@ def obtener_estadisticas_mes(
     """
     estadisticas = MarcaService.calcular_horas_mes(db, fecha)
     return estadisticas
+
+
+@router.get("/art15/saldo/{año}/{mes}", response_model=dict)
+def obtener_saldo_art15(
+    año: int,
+    mes: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene el saldo de Art.15 para un mes específico.
+    
+    Args:
+        año: Año a consultar
+        mes: Mes a consultar (1-12)
+        db: Sesión de base de datos (inyectada)
+        
+    Returns:
+        Diccionario con información del saldo de Art.15
+    """
+    # Validar mes
+    if mes < 1 or mes > 12:
+        raise HTTPException(status_code=400, detail="El mes debe estar entre 1 y 12")
+    
+    saldo = MarcaService.calcular_saldo_art15_mes(db, año, mes)
+    return saldo

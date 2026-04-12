@@ -101,6 +101,11 @@ function renderizarEstadisticasSemana() {
     document.getElementById('porcentaje').textContent = `${stats.porcentaje_completado}%`;
     document.getElementById('diasTrabajados').textContent = stats.dias_trabajados;
     
+    // Actualizar Art.15
+    if (stats.art15) {
+        document.getElementById('art15HorasDisponibles').textContent = stats.art15.horas_disponibles;
+    }
+    
     // Actualizar fechas de la semana
     const fechaInicio = formatearFechaSemana(stats.fecha_inicio);
     const fechaFin = formatearFechaSemana(stats.fecha_fin);
@@ -195,14 +200,35 @@ function renderizarMarcasAgrupadas() {
         // Filas de marcas del día
         dia.marcas.forEach(marca => {
             const row = document.createElement('tr');
+            
+            // Determinar icono y badge según tipo
+            let badgeClass, icono, textoTipo, contenidoHora;
+            if (marca.tipo === 'ENTRADA') {
+                badgeClass = 'badge-entrada';
+                icono = '🟢';
+                textoTipo = 'ENTRADA';
+                contenidoHora = formatearHora(marca.hora);
+            } else if (marca.tipo === 'SALIDA') {
+                badgeClass = 'badge-salida';
+                icono = '🔴';
+                textoTipo = 'SALIDA';
+                contenidoHora = formatearHora(marca.hora);
+            } else if (marca.tipo === 'ART15') {
+                badgeClass = 'badge-art15';
+                icono = '⏰';
+                textoTipo = 'ART. 15';
+                const horasDecimal = marca.horas_art15 / 60;
+                contenidoHora = `${horasDecimal}h`;
+            }
+            
             row.innerHTML = `
                 <td></td>
                 <td>
-                    <span class="badge badge-${marca.tipo.toLowerCase()}">
-                        ${marca.tipo === 'ENTRADA' ? '🟢' : '🔴'} ${marca.tipo}
+                    <span class="badge ${badgeClass}">
+                        ${icono} ${textoTipo}
                     </span>
                 </td>
-                <td style="font-weight: 500;">${formatearHora(marca.hora)}</td>
+                <td style="font-weight: 500;">${contenidoHora}</td>
                 <td style="color: #64748b; font-size: 0.8125rem;">
                     ${marca.observacion || '-'}
                 </td>
@@ -238,13 +264,33 @@ async function handleSubmitMarca(e) {
     
     const form = e.target;
     const formData = new FormData(form);
+    const tipo = formData.get('tipo');
     
     const marca = {
         fecha: formData.get('fecha'),
-        tipo: formData.get('tipo'),
-        hora: formData.get('hora') + ':00', // Agregar segundos
-        observacion: formData.get('observacion') || null
+        tipo: tipo
     };
+    
+    // Agregar campos según el tipo
+    if (tipo === 'ART15') {
+        const horasArt15 = formData.get('horasArt15');
+        if (!horasArt15) {
+            mostrarAlerta('Debe seleccionar las horas de Art. 15', 'error');
+            return;
+        }
+        marca.horas_art15 = parseFloat(horasArt15);
+        marca.hora = null;
+    } else {
+        const hora = formData.get('hora');
+        if (!hora) {
+            mostrarAlerta('Debe ingresar la hora', 'error');
+            return;
+        }
+        marca.hora = hora + ':00';  // Agregar segundos
+        marca.horas_art15 = null;
+    }
+    
+    marca.observacion = formData.get('observacion') || null;
     
     try {
         let response;
@@ -277,6 +323,7 @@ async function handleSubmitMarca(e) {
         mostrarAlerta(mensaje, 'success');
         form.reset();
         document.getElementById('fecha').valueAsDate = new Date();
+        toggleCamposSegunTipo(); // Resetear campos
         cancelarEdicion();
         cargarMarcasAgrupadas();
         cargarEstadisticasSemana(); // Recargar estadísticas
@@ -303,13 +350,28 @@ async function editarMarca(id) {
         // Llenar el formulario
         document.getElementById('fecha').value = marca.fecha;
         document.getElementById('tipo').value = marca.tipo;
-        document.getElementById('hora').value = marca.hora.substring(0, 5); // HH:MM
+        
+        // Configurar campos según el tipo
+        if (marca.tipo === 'ART15') {
+            // Es un Art.15
+            const horasDecimal = marca.horas_art15 / 60;
+            document.getElementById('horasArt15').value = horasDecimal;
+            document.getElementById('hora').value = '';
+        } else {
+            // Es ENTRADA o SALIDA
+            document.getElementById('hora').value = marca.hora.substring(0, 5); // HH:MM
+            document.getElementById('horasArt15').value = '';
+        }
+        
         document.getElementById('observacion').value = marca.observacion || '';
+        
+        // Actualizar visibilidad de campos
+        toggleCamposSegunTipo();
         
         // Cambiar estado a edición
         state.editandoId = id;
         document.getElementById('tituloFormulario').textContent = '✏️ Editar Marca';
-        document.getElementById('btnSubmit').textContent = 'Actualizar Marca';
+        document.getElementById('btnSubmit').textContent = '💾 Actualizar Marca';
         document.getElementById('btnCancelarEdicion').style.display = 'inline-flex';
         
         // Scroll al formulario
@@ -327,10 +389,14 @@ async function editarMarca(id) {
 function cancelarEdicion() {
     state.editandoId = null;
     document.getElementById('tituloFormulario').textContent = '➕ Registrar Nueva Marca';
-    document.getElementById('btnSubmit').textContent = 'Registrar Marca';
+    document.getElementById('btnSubmit').textContent = '✅ Registrar Marca';
     document.getElementById('btnCancelarEdicion').style.display = 'none';
     document.getElementById('formMarca').reset();
     document.getElementById('fecha').valueAsDate = new Date();
+    
+    // Resetear a ENTRADA por defecto
+    document.getElementById('tipo').value = 'ENTRADA';
+    toggleCamposSegunTipo();
 }
 
 /**
@@ -447,9 +513,35 @@ function irSemanaEspecifica() {
     }
 }
 
+/**
+ * Muestra/oculta campos según el tipo de marca seleccionado
+ */
+function toggleCamposSegunTipo() {
+    const tipo = document.getElementById('tipo').value;
+    const grupoHora = document.getElementById('grupoHora');
+    const grupoHorasArt15 = document.getElementById('grupoHorasArt15');
+    const campoHora = document.getElementById('hora');
+    const campoHorasArt15 = document.getElementById('horasArt15');
+    
+    if (tipo === 'ART15') {
+        // Mostrar selector de horas Art.15, ocultar hora
+        grupoHora.style.display = 'none';
+        grupoHorasArt15.style.display = 'block';
+        campoHora.required = false;
+        campoHorasArt15.required = true;
+    } else {
+        // Mostrar hora, ocultar selector Art.15
+        grupoHora.style.display = 'block';
+        grupoHorasArt15.style.display = 'none';
+        campoHora.required = true;
+        campoHorasArt15.required = false;
+    }
+}
+
 // Exponer funciones globalmente para los botones inline
 window.editarMarca = editarMarca;
 window.eliminarMarca = eliminarMarca;
 window.cambiarSemana = cambiarSemana;
 window.irSemanaActual = irSemanaActual;
 window.irSemanaEspecifica = irSemanaEspecifica;
+window.toggleCamposSegunTipo = toggleCamposSegunTipo;
