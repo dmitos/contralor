@@ -42,7 +42,7 @@ class MarcaCreate(BaseModel):
     def validar_horas_art15(cls, v: Optional[float], info) -> Optional[float]:
         """Valida las horas de Art.15"""
         if v is not None:
-            valores_validos = [1.5, 2.0, 2.5, 3.0, 4.0]
+            valores_validos = [1, 1.5, 2.0, 2.5, 3.0, 4.0]
             if v not in valores_validos:
                 raise ValueError(f'Las horas de Art.15 deben ser una de: {valores_validos}')
         return v
@@ -101,7 +101,7 @@ class MarcaUpdate(BaseModel):
     def validar_horas_art15(cls, v: Optional[float]) -> Optional[float]:
         """Valida las horas de Art.15"""
         if v is not None:
-            valores_validos = [1.5, 2.0, 2.5, 3.0, 4.0]
+            valores_validos = [1, 1.5, 2.0, 2.5, 3.0, 4.0]
             if v not in valores_validos:
                 raise ValueError(f'Las horas de Art.15 deben ser una de: {valores_validos}')
         return v

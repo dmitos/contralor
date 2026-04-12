@@ -31,7 +31,7 @@ class Marca(Base):
     fecha = Column(Date, nullable=False, index=True)
     tipo = Column(String(10), nullable=False)  # 'ENTRADA', 'SALIDA' o 'ART15'
     hora = Column(Time, nullable=True)  # Nullable para Art.15
-    horas_art15 = Column(Integer, nullable=True)  # Horas en minutos (90, 120, 150, 180, 240)
+    horas_art15 = Column(Integer, nullable=True)  # Horas en minutos (60, 90, 120, 150, 180, 240)
     observacion = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
