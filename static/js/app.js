@@ -218,7 +218,7 @@ function renderizarMarcasAgrupadas() {
                 icono = '⏰';
                 textoTipo = 'ART. 15';
                 const horasDecimal = marca.horas_art15 / 60;
-                contenidoHora = `${horasDecimal}h`;
+                contenidoHora = `${formatearHora(marca.hora)} (${horasDecimal}h)`;
             }
             
             row.innerHTML = `
@@ -268,29 +268,29 @@ async function handleSubmitMarca(e) {
     
     const marca = {
         fecha: formData.get('fecha'),
-        tipo: tipo
+        tipo: tipo,
+        observacion: formData.get('observacion') || null
     };
     
-    // Agregar campos según el tipo
+    // Validar y agregar hora (siempre requerida)
+    const hora = formData.get('hora');
+    if (!hora) {
+        mostrarAlerta('Debe ingresar la hora', 'error');
+        return;
+    }
+    marca.hora = hora + ':00';  // Agregar segundos
+    
+    // Agregar horas Art.15 si es del tipo ART15
     if (tipo === 'ART15') {
         const horasArt15 = formData.get('horasArt15');
         if (!horasArt15) {
-            mostrarAlerta('Debe seleccionar las horas de Art. 15', 'error');
+            mostrarAlerta('Debe seleccionar las horas a compensar', 'error');
             return;
         }
         marca.horas_art15 = parseFloat(horasArt15);
-        marca.hora = null;
     } else {
-        const hora = formData.get('hora');
-        if (!hora) {
-            mostrarAlerta('Debe ingresar la hora', 'error');
-            return;
-        }
-        marca.hora = hora + ':00';  // Agregar segundos
         marca.horas_art15 = null;
     }
-    
-    marca.observacion = formData.get('observacion') || null;
     
     try {
         let response;
@@ -524,17 +524,23 @@ function toggleCamposSegunTipo() {
     const campoHorasArt15 = document.getElementById('horasArt15');
     
     if (tipo === 'ART15') {
-        // Mostrar selector de horas Art.15, ocultar hora
-        grupoHora.style.display = 'none';
+        // Art.15: Mostrar AMBOS campos (hora + horas a compensar)
+        grupoHora.style.display = 'block';
         grupoHorasArt15.style.display = 'block';
-        campoHora.required = false;
+        campoHora.required = true;
         campoHorasArt15.required = true;
+        
+        // Cambiar label del campo hora
+        grupoHora.querySelector('label').textContent = 'Hora del artículo';
     } else {
-        // Mostrar hora, ocultar selector Art.15
+        // Entrada/Salida: Solo mostrar hora
         grupoHora.style.display = 'block';
         grupoHorasArt15.style.display = 'none';
         campoHora.required = true;
         campoHorasArt15.required = false;
+        
+        // Restaurar label original
+        grupoHora.querySelector('label').textContent = 'Hora';
     }
 }
 
