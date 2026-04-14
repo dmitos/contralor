@@ -289,25 +289,17 @@ class MarcaService:
     def calcular_horas_semana(db: Session, fecha_referencia: Optional[date] = None) -> Dict:
         """
         Calcula las horas trabajadas en la semana de la fecha de referencia.
+        Considera feriados para ajustar las horas requeridas.
         
         Args:
             db: Sesión de base de datos
             fecha_referencia: Fecha de referencia (default: hoy)
             
         Returns:
-            Diccionario con estadísticas de la semana:
-            {
-                'fecha_inicio': fecha del lunes,
-                'fecha_fin': fecha del domingo,
-                'horas_trabajadas': "HH:MM",
-                'horas_trabajadas_decimal': float,
-                'horas_requeridas': 43.0,
-                'diferencia': "HH:MM" (positivo o negativo),
-                'diferencia_decimal': float,
-                'porcentaje_completado': float,
-                'dias_trabajados': int
-            }
+            Diccionario con estadísticas de la semana incluyendo ajuste por feriados
         """
+        from database.models import Feriado
+        
         if not fecha_referencia:
             fecha_referencia = date.today()
         
@@ -316,6 +308,18 @@ class MarcaService:
         
         # Obtener marcas de la semana
         marcas = MarcaService.obtener_marcas_rango_fechas(db, inicio_semana, fin_semana)
+        
+        # Obtener feriados de la semana (solo lunes a viernes)
+        feriados_semana = db.query(Feriado)\
+            .filter(
+                Feriado.fecha >= inicio_semana,
+                Feriado.fecha <= fin_semana
+            )\
+            .all()
+        
+        # Filtrar solo feriados que caen en días laborables (lunes=0 a viernes=4)
+        feriados_laborables = [f for f in feriados_semana if f.fecha.weekday() < 5]
+        cantidad_feriados = len(feriados_laborables)
         
         # Agrupar por día y calcular horas
         marcas_por_dia = {}
@@ -345,10 +349,23 @@ class MarcaService:
         minutos = int((total_segundos % 3600) // 60)
         horas_str = f"{horas:02d}:{minutos:02d}"
         
-        # Calcular diferencia con las 43 horas requeridas
-        horas_requeridas = 43.0
+        # Calcular horas requeridas ajustadas por feriados
+        # Cada feriado resta 8 horas 36 minutos (8.6 horas = 516 minutos)
+        horas_requeridas_base = 43.0
+        minutos_por_feriado = 516  # 8h 36min
+        ajuste_feriados_minutos = cantidad_feriados * minutos_por_feriado
+        
+        horas_requeridas_minutos = int(horas_requeridas_base * 60) - ajuste_feriados_minutos
+        horas_requeridas = horas_requeridas_minutos / 60
+        
+        # Formato HH:MM de horas requeridas
+        hrs_req = int(horas_requeridas_minutos // 60)
+        min_req = int(horas_requeridas_minutos % 60)
+        horas_requeridas_str = f"{hrs_req:02d}:{min_req:02d}"
+        
+        # Calcular diferencia con las horas requeridas ajustadas
         diferencia_decimal = horas_decimales - horas_requeridas
-        diferencia_segundos = total_segundos - (int(horas_requeridas * 3600))
+        diferencia_segundos = total_segundos - (horas_requeridas_minutos * 60)
         
         # Convertir diferencia a HH:MM
         signo = "+" if diferencia_segundos >= 0 else "-"
@@ -360,8 +377,7 @@ class MarcaService:
         # Porcentaje completado
         porcentaje = (horas_decimales / horas_requeridas * 100) if horas_requeridas > 0 else 0
         
-        # Calcular saldo Art.15 del mes (o meses) que abarca la semana
-        # Una semana puede abarcar dos meses, usamos el mes de la fecha de referencia
+        # Calcular saldo Art.15 del mes
         año_ref = fecha_referencia.year
         mes_ref = fecha_referencia.month
         saldo_art15 = MarcaService.calcular_saldo_art15_mes(db, año_ref, mes_ref)
@@ -372,11 +388,17 @@ class MarcaService:
             'horas_trabajadas': horas_str,
             'horas_trabajadas_decimal': round(horas_decimales, 2),
             'horas_requeridas': horas_requeridas,
+            'horas_requeridas_str': horas_requeridas_str,
             'diferencia': diferencia_str,
             'diferencia_decimal': round(diferencia_decimal, 2),
             'porcentaje_completado': round(porcentaje, 1),
             'dias_trabajados': dias_trabajados,
-            'art15': saldo_art15  # Información del Art.15
+            'feriados': {
+                'cantidad': cantidad_feriados,
+                'fechas': [{'fecha': f.fecha, 'nombre': f.nombre} for f in feriados_laborables],
+                'ajuste_horas': round(ajuste_feriados_minutos / 60, 2)
+            },
+            'art15': saldo_art15
         }
     
     @staticmethod

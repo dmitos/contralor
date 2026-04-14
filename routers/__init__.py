@@ -4,5 +4,6 @@ Contiene los endpoints de la API REST.
 """
 
 from .marcas import router as marcas_router
+from .feriados import router as feriados_router
 
-__all__ = ["marcas_router"]
+__all__ = ["marcas_router", "feriados_router"]

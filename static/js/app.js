@@ -96,7 +96,11 @@ function renderizarEstadisticasSemana() {
     
     // Actualizar valores
     document.getElementById('horasTrabajadas').textContent = stats.horas_trabajadas;
-    document.getElementById('horasRequeridas').textContent = '43:00';
+    
+    // Actualizar horas requeridas (puede variar por feriados)
+    const horasReqTexto = stats.horas_requeridas_str || '43:00';
+    document.getElementById('horasRequeridas').textContent = horasReqTexto;
+    
     document.getElementById('diferencia').textContent = stats.diferencia;
     document.getElementById('porcentaje').textContent = `${stats.porcentaje_completado}%`;
     document.getElementById('diasTrabajados').textContent = stats.dias_trabajados;
@@ -134,6 +138,31 @@ function renderizarEstadisticasSemana() {
         progressBar.style.backgroundColor = 'var(--warning-color)';
     } else {
         progressBar.style.backgroundColor = 'var(--primary-color)';
+    }
+    
+    // Actualizar leyenda con información de feriados
+    // Buscar el div de leyenda que está FUERA de las tarjetas de estadísticas
+    const cardEstadisticas = document.querySelector('.card');
+    if (cardEstadisticas) {
+        // Buscar el último div hijo que contiene la leyenda
+        const todosLosDivs = cardEstadisticas.querySelectorAll('div');
+        const leyenda = todosLosDivs[todosLosDivs.length - 1];
+        
+        // Verificar que es realmente la leyenda (contiene "Objetivo:")
+        if (leyenda && leyenda.textContent.includes('Objetivo:')) {
+            if (stats.feriados && stats.feriados.cantidad > 0) {
+                const feriadosInfo = stats.feriados.fechas.map(f => f.nombre).join(', ');
+                leyenda.innerHTML = `
+                    💡 <strong>Objetivo:</strong> ${horasReqTexto} semanales (Lunes a Domingo)
+                    <br>
+                    🎉 <strong>Feriados esta semana:</strong> ${stats.feriados.cantidad} - ${feriadosInfo}
+                    <br>
+                    📉 <strong>Ajuste:</strong> -${stats.feriados.ajuste_horas}h por feriados
+                `;
+            } else {
+                leyenda.innerHTML = `💡 <strong>Objetivo:</strong> 43 horas semanales (Lunes a Domingo)`;
+            }
+        }
     }
 }
 

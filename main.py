@@ -15,7 +15,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db
-from routers import marcas_router
+from routers import marcas_router, feriados_router
 
 # Crear aplicación FastAPI
 app = FastAPI(
@@ -43,6 +43,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Registrar routers
 app.include_router(marcas_router)
+app.include_router(feriados_router)
 
 
 @app.on_event("startup")
