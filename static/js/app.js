@@ -141,27 +141,19 @@ function renderizarEstadisticasSemana() {
     }
     
     // Actualizar leyenda con información de feriados
-    // Buscar el div de leyenda que está FUERA de las tarjetas de estadísticas
-    const cardEstadisticas = document.querySelector('.card');
-    if (cardEstadisticas) {
-        // Buscar el último div hijo que contiene la leyenda
-        const todosLosDivs = cardEstadisticas.querySelectorAll('div');
-        const leyenda = todosLosDivs[todosLosDivs.length - 1];
-        
-        // Verificar que es realmente la leyenda (contiene "Objetivo:")
-        if (leyenda && leyenda.textContent.includes('Objetivo:')) {
-            if (stats.feriados && stats.feriados.cantidad > 0) {
-                const feriadosInfo = stats.feriados.fechas.map(f => f.nombre).join(', ');
-                leyenda.innerHTML = `
-                    💡 <strong>Objetivo:</strong> ${horasReqTexto} semanales (Lunes a Domingo)
-                    <br>
-                    🎉 <strong>Feriados esta semana:</strong> ${stats.feriados.cantidad} - ${feriadosInfo}
-                    <br>
-                    📉 <strong>Ajuste:</strong> -${stats.feriados.ajuste_horas}h por feriados
-                `;
-            } else {
-                leyenda.innerHTML = `💡 <strong>Objetivo:</strong> 43 horas semanales (Lunes a Domingo)`;
-            }
+    const leyenda = document.getElementById('leyendaObjetivo');
+    if (leyenda) {
+        if (stats.feriados && stats.feriados.cantidad > 0) {
+            const feriadosInfo = stats.feriados.fechas.map(f => f.nombre).join(', ');
+            leyenda.innerHTML = `
+                💡 <strong>Objetivo:</strong> ${horasReqTexto} semanales (Lunes a Domingo)
+                <br>
+                🎉 <strong>Feriados esta semana:</strong> ${stats.feriados.cantidad} — ${feriadosInfo}
+                <br>
+                📉 <strong>Ajuste:</strong> -${stats.feriados.ajuste_horas}h por feriados
+            `;
+        } else {
+            leyenda.innerHTML = `💡 <strong>Objetivo:</strong> 43 horas semanales (Lunes a Domingo)`;
         }
     }
 
