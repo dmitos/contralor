@@ -164,6 +164,8 @@ function renderizarEstadisticasSemana() {
             }
         }
     }
+
+    renderizarProyeccionSalida();
 }
 
 /**
@@ -207,6 +209,7 @@ function renderizarMarcasAgrupadas() {
                 </td>
             </tr>
         `;
+        renderizarProyeccionSalida();
         return;
     }
     
@@ -229,7 +232,7 @@ function renderizarMarcasAgrupadas() {
         // Filas de marcas del día
         dia.marcas.forEach(marca => {
             const row = document.createElement('tr');
-            
+
             // Determinar icono y badge según tipo
             let badgeClass, icono, textoTipo, contenidoHora;
             if (marca.tipo === 'ENTRADA') {
@@ -249,7 +252,7 @@ function renderizarMarcasAgrupadas() {
                 const horasDecimal = marca.horas_art15 / 60;
                 contenidoHora = `${formatearHora(marca.hora)} (${horasDecimal}h)`;
             }
-            
+
             row.innerHTML = `
                 <td></td>
                 <td>
@@ -265,14 +268,14 @@ function renderizarMarcasAgrupadas() {
                     ${formatearDateTime(marca.created_at)}
                 </td>
                 <td>
-                    <button 
-                        onclick="editarMarca(${marca.id})" 
+                    <button
+                        onclick="editarMarca(${marca.id})"
                         class="btn btn-primary btn-small"
                         title="Editar">
                         ✏️
                     </button>
-                    <button 
-                        onclick="eliminarMarca(${marca.id})" 
+                    <button
+                        onclick="eliminarMarca(${marca.id})"
                         class="btn btn-danger btn-small"
                         title="Eliminar"
                         style="margin-left: 0.5rem;">
@@ -283,6 +286,8 @@ function renderizarMarcasAgrupadas() {
             tbody.appendChild(row);
         });
     });
+
+    renderizarProyeccionSalida();
 }
 
 /**
@@ -571,6 +576,134 @@ function toggleCamposSegunTipo() {
         // Restaurar label original
         grupoHora.querySelector('label').textContent = 'Hora';
     }
+}
+
+/**
+ * Convierte minutos desde medianoche a formato HH:MM
+ */
+function minToHHMM(totalMinutos) {
+    const h = Math.floor(totalMinutos / 60);
+    const m = Math.floor(totalMinutos % 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/**
+ * Calcula la proyección de salida para hoy basándose en la última ENTRADA
+ * abierta y las estadísticas de la semana actual.
+ *
+ * La jornada estándar se calcula como horas_requeridas / días_laborables_semana
+ * para respetar automáticamente la reducción por feriados.
+ * Los días restantes para cubrir la semana también descuentan feriados futuros.
+ */
+function calcularProyeccionSalida() {
+    if (!state.estadisticasSemana || !state.marcasAgrupadas.length) return null;
+
+    const hoy = new Date().toISOString().split('T')[0];
+    const diaHoy = state.marcasAgrupadas.find(d => d.fecha === hoy);
+    if (!diaHoy) return null;
+
+    // Última ENTRADA sin SALIDA posterior
+    let ultimaEntrada = null;
+    for (const marca of diaHoy.marcas) {
+        if (marca.tipo === 'ENTRADA') ultimaEntrada = marca;
+        else if (marca.tipo === 'SALIDA') ultimaEntrada = null;
+    }
+    if (!ultimaEntrada) return null;
+
+    const [h, m] = ultimaEntrada.hora.split(':').map(Number);
+    const entradaMin = h * 60 + m;
+
+    const stats = state.estadisticasSemana;
+
+    // Jornada diaria = horas requeridas / días laborables efectivos de la semana
+    const diasLaboralesSemana = Math.max(1, 5 - (stats.feriados?.cantidad || 0));
+    const jornadaDiariaMin = Math.round((stats.horas_requeridas * 60) / diasLaboralesSemana);
+    const salidaEstandarMin = entradaMin + jornadaDiariaMin;
+
+    // Horas faltantes para cerrar la semana (sesión abierta de hoy no contabilizada)
+    const trabajadasMin = Math.round(stats.horas_trabajadas_decimal * 60);
+    const requeridosMin = Math.round(stats.horas_requeridas * 60);
+    const faltantesMin = requeridosMin - trabajadasMin;
+
+    // Días laborables restantes (hoy inclusive) descontando feriados desde hoy
+    const hoyDate = new Date(hoy + 'T12:00:00');
+    const diaSemana = hoyDate.getDay(); // 0=Dom … 5=Vie … 6=Sab
+    const diasBaseRestantes = (diaSemana >= 1 && diaSemana <= 5) ? (6 - diaSemana) : 0;
+    const feriadosFuturos = (stats.feriados?.fechas || []).filter(f => f.fecha >= hoy).length;
+    const diasRestantes = Math.max(1, diasBaseRestantes - feriadosFuturos);
+
+    let salidaSemanalMin = null;
+    if (faltantesMin > 0) {
+        const horasHoyMin = Math.min(Math.round(faltantesMin / diasRestantes), 600);
+        salidaSemanalMin = entradaMin + horasHoyMin;
+    }
+
+    return {
+        horaEntrada: ultimaEntrada.hora.substring(0, 5),
+        jornadaDiariaMin,
+        salidaEstandarMin,
+        salidaSemanalMin,
+        salidaEstandar: minToHHMM(salidaEstandarMin),
+        salidaSemanal: salidaSemanalMin !== null ? minToHHMM(salidaSemanalMin) : null,
+        faltantesMin,
+        diasRestantes,
+        semanaCompletada: faltantesMin <= 0
+    };
+}
+
+/**
+ * Muestra u oculta la tarjeta de proyección de salida según si hay una
+ * ENTRADA abierta hoy.
+ */
+function renderizarProyeccionSalida() {
+    const card = document.getElementById('cardProyeccion');
+    if (!card) return;
+
+    const p = calcularProyeccionSalida();
+
+    if (!p) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = 'block';
+
+    const jornadaStr = minToHHMM(p.jornadaDiariaMin);
+    const faltantesStr = minToHHMM(Math.abs(p.faltantesMin));
+
+    const saldoHtml = p.semanaCompletada
+        ? `✅ <strong>Semana completada.</strong> Superávit: <strong>${faltantesStr}</strong>`
+        : `⚠️ Faltan <strong>${faltantesStr}</strong> para la semana — distribuido en ${p.diasRestantes} día${p.diasRestantes !== 1 ? 's' : ''} restante${p.diasRestantes !== 1 ? 's' : ''}`;
+
+    let salidaSemanalHtml;
+    if (p.semanaCompletada) {
+        salidaSemanalHtml = `<div style="color: var(--success-color); font-size: 1.5rem; font-weight: 700;">¡Cubierto! 🎉</div>`;
+    } else {
+        const esMasTarde = p.salidaSemanalMin > p.salidaEstandarMin;
+        const color = esMasTarde ? 'var(--danger-color)' : 'var(--success-color)';
+        const flecha = esMasTarde ? '▲' : '▼';
+        salidaSemanalHtml = `<div style="color: ${color}; font-size: 1.5rem; font-weight: 700;">${p.salidaSemanal} <span style="font-size: 0.875rem;">${flecha}</span></div>`;
+    }
+
+    document.getElementById('contenidoProyeccion').innerHTML = `
+        <div style="display: flex; flex-wrap: wrap; gap: 2rem; align-items: flex-end; margin-bottom: 0.75rem;">
+            <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Entrada</div>
+                <div style="font-size: 1.5rem; font-weight: 700;">${p.horaEntrada}</div>
+            </div>
+            <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">⏱️ Salida estándar (${jornadaStr})</div>
+                <div style="font-size: 1.5rem; font-weight: 700;">${p.salidaEstandar}</div>
+            </div>
+            <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">📊 Para cubrir semana (${p.diasRestantes} día${p.diasRestantes !== 1 ? 's' : ''} restante${p.diasRestantes !== 1 ? 's' : ''})</div>
+                ${salidaSemanalHtml}
+            </div>
+        </div>
+        <div style="font-size: 0.875rem; color: #475569; padding: 0.5rem 0.75rem; background: white; border-radius: 0.375rem;">
+            ${saldoHtml}
+        </div>
+    `;
 }
 
 // Exponer funciones globalmente para los botones inline

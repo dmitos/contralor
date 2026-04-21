@@ -13,6 +13,10 @@ from datetime import date, datetime, time, timedelta
 from typing import List, Optional, Dict, Tuple
 
 
+# Límite de horas trabajadas por día (regla de negocio)
+MAX_HORAS_DIA_SEGUNDOS = 10 * 3600  # 10 horas en segundos
+
+
 class MarcaService:
     """
     Servicio para gestionar operaciones sobre marcas horarias.
@@ -127,6 +131,9 @@ class MarcaService:
         """
         Actualiza una marca existente.
         
+        Aplica la misma conversión de horas_art15 (decimal → minutos) que crear_marca,
+        para mantener consistencia en el almacenamiento.
+        
         Args:
             db: Sesión de base de datos
             marca_id: ID de la marca a actualizar
@@ -140,8 +147,15 @@ class MarcaService:
         if not marca:
             return None
         
-        # Actualizar solo campos que no sean None
+        # Obtener campos a actualizar (solo los que fueron enviados)
         update_data = marca_data.model_dump(exclude_unset=True)
+
+        # FIX: convertir horas_art15 de decimal a minutos antes de persistir,
+        # igual que en crear_marca. Sin esto, editar un Art.15 guardaba el valor
+        # decimal directamente (ej: 1.5) en vez de minutos (90).
+        if "horas_art15" in update_data and update_data["horas_art15"] is not None:
+            update_data["horas_art15"] = int(update_data["horas_art15"] * 60)
+
         for field, value in update_data.items():
             setattr(marca, field, value)
         
@@ -177,6 +191,9 @@ class MarcaService:
         Calcula las horas trabajadas en un día a partir de las marcas.
         Incluye horas de Art.15.
         Asume que las marcas ENTRADA/SALIDA están ordenadas cronológicamente.
+
+        El total diario está limitado a MAX_HORAS_DIA_SEGUNDOS (10 horas).
+        Esto previene acumulaciones incorrectas por marcas mal cargadas.
         
         Args:
             marcas: Lista de marcas del día (ordenadas por hora)
@@ -199,11 +216,17 @@ class MarcaService:
                 dt_salida = datetime.combine(date.today(), marca.hora)
                 
                 diferencia = dt_salida - dt_entrada
-                total_segundos += diferencia.total_seconds()
+                # Ignorar intervalos negativos (salida antes que entrada — dato corrupto)
+                if diferencia.total_seconds() > 0:
+                    total_segundos += diferencia.total_seconds()
                 entrada_actual = None
             elif marca.tipo == "ART15" and marca.horas_art15:
                 # Agregar las horas del artículo (almacenadas en minutos)
                 total_segundos += marca.horas_art15 * 60
+
+        # FIX: aplicar límite de 10 horas diarias.
+        # Previene que marcas incorrectas inflen el total semanal.
+        total_segundos = min(total_segundos, MAX_HORAS_DIA_SEGUNDOS)
         
         # Convertir segundos a formato HH:MM
         horas = int(total_segundos // 3600)
@@ -265,7 +288,6 @@ class MarcaService:
         Returns:
             Fecha del lunes de esa semana
         """
-        # weekday(): Lunes=0, Domingo=6
         dias_desde_lunes = fecha.weekday()
         inicio_semana = fecha - timedelta(days=dias_desde_lunes)
         return inicio_semana
@@ -336,7 +358,6 @@ class MarcaService:
             horas_dia = MarcaService.calcular_horas_dia(marcas_dia)
             if horas_dia != "00:00":
                 dias_trabajados += 1
-                # Convertir HH:MM a segundos
                 partes = horas_dia.split(":")
                 segundos_dia = int(partes[0]) * 3600 + int(partes[1]) * 60
                 total_segundos += segundos_dia
@@ -350,7 +371,7 @@ class MarcaService:
         horas_str = f"{horas:02d}:{minutos:02d}"
         
         # Calcular horas requeridas ajustadas por feriados
-        # Cada feriado resta 8 horas 36 minutos (8.6 horas = 516 minutos)
+        # Cada feriado resta 8 horas 36 minutos (516 minutos)
         horas_requeridas_base = 43.0
         minutos_por_feriado = 516  # 8h 36min
         ajuste_feriados_minutos = cantidad_feriados * minutos_por_feriado
@@ -419,23 +440,19 @@ class MarcaService:
         # Primer y último día del mes
         inicio_mes = fecha_referencia.replace(day=1)
         
-        # Calcular último día del mes
         if fecha_referencia.month == 12:
             fin_mes = fecha_referencia.replace(year=fecha_referencia.year + 1, month=1, day=1) - timedelta(days=1)
         else:
             fin_mes = fecha_referencia.replace(month=fecha_referencia.month + 1, day=1) - timedelta(days=1)
         
-        # Obtener marcas del mes
         marcas = MarcaService.obtener_marcas_rango_fechas(db, inicio_mes, fin_mes)
         
-        # Agrupar por día y calcular horas
         marcas_por_dia = {}
         for marca in marcas:
             if marca.fecha not in marcas_por_dia:
                 marcas_por_dia[marca.fecha] = []
             marcas_por_dia[marca.fecha].append(marca)
         
-        # Calcular total de segundos trabajados
         total_segundos = 0
         dias_trabajados = 0
         
@@ -447,10 +464,7 @@ class MarcaService:
                 segundos_dia = int(partes[0]) * 3600 + int(partes[1]) * 60
                 total_segundos += segundos_dia
         
-        # Convertir a horas decimales
         horas_decimales = total_segundos / 3600
-        
-        # Convertir a formato HH:MM
         horas = int(total_segundos // 3600)
         minutos = int((total_segundos % 3600) // 60)
         horas_str = f"{horas:02d}:{minutos:02d}"
@@ -483,14 +497,12 @@ class MarcaService:
             - horas_disponibles: Horas restantes
             - usos: Lista de usos (fecha, horas)
         """
-        # Primer y último día del mes
         primer_dia = date(año, mes, 1)
         if mes == 12:
             ultimo_dia = date(año + 1, 1, 1) - timedelta(days=1)
         else:
             ultimo_dia = date(año, mes + 1, 1) - timedelta(days=1)
         
-        # Obtener todos los Art.15 del mes
         art15_mes = db.query(Marca)\
             .filter(
                 and_(
@@ -502,11 +514,9 @@ class MarcaService:
             .order_by(Marca.fecha)\
             .all()
         
-        # Calcular horas usadas (convertir de minutos a horas)
         horas_usadas = sum(marca.horas_art15 / 60 for marca in art15_mes if marca.horas_art15)
         horas_disponibles = 4.0 - horas_usadas
         
-        # Lista de usos
         usos = [
             {
                 'id': marca.id,
@@ -525,5 +535,3 @@ class MarcaService:
             'horas_disponibles': round(horas_disponibles, 1),
             'usos': usos
         }
-
-
