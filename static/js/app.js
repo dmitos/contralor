@@ -677,30 +677,32 @@ function renderizarProyeccionSalida() {
 
     let salidaSemanalHtml;
     if (p.semanaCompletada) {
-        salidaSemanalHtml = `<div style="color: var(--success-color); font-size: 1.5rem; font-weight: 700;">¡Cubierto! 🎉</div>`;
+        salidaSemanalHtml = `<div style="color: var(--success-color); font-size: 1.25rem; font-weight: 700;">¡Listo! 🎉</div>`;
     } else {
         const esMasTarde = p.salidaSemanalMin > p.salidaEstandarMin;
         const color = esMasTarde ? 'var(--danger-color)' : 'var(--success-color)';
         const flecha = esMasTarde ? '▲' : '▼';
-        salidaSemanalHtml = `<div style="color: ${color}; font-size: 1.5rem; font-weight: 700;">${p.salidaSemanal} <span style="font-size: 0.875rem;">${flecha}</span></div>`;
+        salidaSemanalHtml = `<div style="color: ${color}; font-size: 1.25rem; font-weight: 700;">${p.salidaSemanal} <span style="font-size: 0.7rem;">${flecha}</span></div>`;
     }
 
     document.getElementById('contenidoProyeccion').innerHTML = `
-        <div style="display: flex; flex-wrap: wrap; gap: 2rem; align-items: flex-end; margin-bottom: 0.75rem;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; text-align: center; margin-bottom: 0.5rem;">
             <div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Entrada</div>
-                <div style="font-size: 1.5rem; font-weight: 700;">${p.horaEntrada}</div>
+                <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Entrada</div>
+                <div style="font-size: 1.25rem; font-weight: 700;">${p.horaEntrada}</div>
+            </div>
+            <div style="border-left: 1px solid #a7f3d0; border-right: 1px solid #a7f3d0; padding: 0 0.25rem;">
+                <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">⏱ Estándar</div>
+                <div style="font-size: 1.25rem; font-weight: 700;">${p.salidaEstandar}</div>
+                <div style="font-size: 0.65rem; color: var(--text-muted);">${jornadaStr}/día</div>
             </div>
             <div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">⏱️ Salida estándar (${jornadaStr})</div>
-                <div style="font-size: 1.5rem; font-weight: 700;">${p.salidaEstandar}</div>
-            </div>
-            <div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">📊 Para cubrir semana (${p.diasRestantes} día${p.diasRestantes !== 1 ? 's' : ''} restante${p.diasRestantes !== 1 ? 's' : ''})</div>
+                <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">📊 Semana</div>
                 ${salidaSemanalHtml}
+                <div style="font-size: 0.65rem; color: var(--text-muted);">${p.diasRestantes} día${p.diasRestantes !== 1 ? 's' : ''} rest.</div>
             </div>
         </div>
-        <div style="font-size: 0.875rem; color: #475569; padding: 0.5rem 0.75rem; background: white; border-radius: 0.375rem;">
+        <div style="font-size: 0.75rem; color: #475569; padding: 0.35rem 0.6rem; background: white; border-radius: 0.25rem;">
             ${saldoHtml}
         </div>
     `;

@@ -61,3 +61,7 @@ htmlcov/
 
 # Docker
 .dockerignore
+
+# Claude Code
+CLAUDE.md
+.claude/
