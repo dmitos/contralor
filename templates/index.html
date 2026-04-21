@@ -193,7 +193,14 @@
 
         <!-- Lista de Marcas -->
         <div class="card">
-            <h2 class="card-title">📋 Historial de Marcas</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                <h2 class="card-title" style="margin: 0;">📋 Historial de Marcas</h2>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button onclick="cambiarSemana(-1)" class="btn btn-primary btn-small" title="Semana anterior">◀</button>
+                    <span id="rangoSemanaHistorial" style="font-size: 0.8125rem; font-weight: 600; color: #1e293b; white-space: nowrap;">Cargando...</span>
+                    <button onclick="cambiarSemana(1)" class="btn btn-primary btn-small" title="Semana siguiente">▶</button>
+                </div>
+            </div>
 
             <!-- Loading -->
             <div id="loading" class="loading" style="display: none;">

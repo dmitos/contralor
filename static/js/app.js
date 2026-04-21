@@ -161,20 +161,38 @@ function renderizarEstadisticasSemana() {
 }
 
 /**
- * Carga marcas agrupadas por día desde la API
+ * Carga marcas agrupadas por día para la semana de referencia actual
  */
 async function cargarMarcasAgrupadas() {
     try {
         toggleLoading(true);
-        const response = await fetch(`${API_BASE}/agrupadas`);
-        
+
+        // Calcular lunes y domingo de la semana de referencia
+        const fechaRef = state.fechaReferenciaEstadisticas
+            ? new Date(state.fechaReferenciaEstadisticas + 'T12:00:00')
+            : new Date();
+        const dia = fechaRef.getDay();
+        const diffLunes = dia === 0 ? -6 : 1 - dia;
+        const lunes = new Date(fechaRef);
+        lunes.setDate(fechaRef.getDate() + diffLunes);
+        const domingo = new Date(lunes);
+        domingo.setDate(lunes.getDate() + 6);
+        const desde = lunes.toISOString().split('T')[0];
+        const hasta = domingo.toISOString().split('T')[0];
+
+        // Actualizar rango en el encabezado del historial
+        const rangoEl = document.getElementById('rangoSemanaHistorial');
+        if (rangoEl) rangoEl.textContent = `${formatearFechaSemana(desde)} — ${formatearFechaSemana(hasta)}`;
+
+        const response = await fetch(`${API_BASE}/agrupadas?fecha_desde=${desde}&fecha_hasta=${hasta}`);
+
         if (!response.ok) {
             throw new Error('Error al cargar marcas');
         }
-        
+
         state.marcasAgrupadas = await response.json();
         renderizarMarcasAgrupadas();
-        
+
     } catch (error) {
         console.error('Error:', error);
         mostrarAlerta('Error al cargar las marcas', 'error');
@@ -504,19 +522,13 @@ function formatearDateTime(dateTimeStr) {
  * @param {number} offset - Número de semanas a mover (-1 = anterior, +1 = siguiente)
  */
 function cambiarSemana(offset) {
-    // Si no hay fecha de referencia, usar hoy
-    let fechaRef = state.fechaReferenciaEstadisticas 
+    let fechaRef = state.fechaReferenciaEstadisticas
         ? new Date(state.fechaReferenciaEstadisticas + 'T00:00:00')
         : new Date();
-    
-    // Mover 7 días por cada semana
     fechaRef.setDate(fechaRef.getDate() + (offset * 7));
-    
-    // Guardar nueva fecha de referencia (formato YYYY-MM-DD)
     state.fechaReferenciaEstadisticas = fechaRef.toISOString().split('T')[0];
-    
-    // Recargar estadísticas
     cargarEstadisticasSemana();
+    cargarMarcasAgrupadas();
 }
 
 /**
@@ -526,6 +538,7 @@ function irSemanaActual() {
     state.fechaReferenciaEstadisticas = null;
     document.getElementById('selectorFechaSemana').value = '';
     cargarEstadisticasSemana();
+    cargarMarcasAgrupadas();
 }
 
 /**
@@ -536,6 +549,7 @@ function irSemanaEspecifica() {
     if (fecha) {
         state.fechaReferenciaEstadisticas = fecha;
         cargarEstadisticasSemana();
+        cargarMarcasAgrupadas();
     }
 }
 
