@@ -1,183 +1,125 @@
-# Control Horario UdelaR 🕐
+# Control Horario UdelaR
 
 Sistema de registro y control de marcas horarias (entradas y salidas) desarrollado con FastAPI y SQLite.
 
-## 📋 Características
+## Características
 
-- ✅ Registro de marcas de entrada y salida
-- 📅 Soporte para cualquier fecha (presente, pasado)
-- ✏️ Edición y eliminación de marcas
-- 📊 Visualización agrupada por día con cálculo de horas
-- 💾 Persistencia local con SQLite
-- 🎨 Interfaz web moderna y responsive
-- 🔌 API REST completa con documentación automática
-- ✅ Navegar semana por semana con las flechas
-- ✅ Saltar a cualquier fecha con el selector
-- ✅ Volver rápido a hoy con el botón "Hoy"
-- ✅ Se muestra el rango exacto de la semana (Lun X - Dom Y)
-- ✅ Persiste la navegación mientras no recargues la página
-- ✅ Actualización automática cuando volvés a "Hoy" tras registrar marcas
+- Registro de marcas de entrada, salida y Art. 15
+- Soporte para cualquier fecha (presente, pasado)
+- Edición y eliminación de marcas
+- Visualización del historial paginado por semana
+- Navegación semana a semana con flechas, selector de fecha y botón "Hoy"
+- Proyección de hora de salida: salida estándar y salida para cubrir las horas semanales
+- Estadísticas semanales: horas trabajadas, requeridas, diferencia, días trabajados y saldo de Art. 15
+- Gestión de feriados nacionales de Uruguay con precarga automática y ajuste de horas requeridas
+- Base de datos SQLite con persistencia local
+- Interfaz web responsive optimizada para móvil
 
-## 🚀 Instalación y Ejecución
+## Instalación y ejecución
 
-### Opción 1: Docker (Recomendado para producción) 🐳
+### Docker (recomendado)
 
 ```bash
-# Inicio rápido con script
-chmod +x start-docker.sh
-./start-docker.sh
-
-# O manualmente
 docker-compose up -d
 ```
 
-**Acceso:** http://localhost:8200
+Acceso: http://localhost:8200
 
-📘 Ver [DOCKER.md](DOCKER.md) para guía completa de deployment
+Ver [DOCKER.md](DOCKER.md) para guía completa de deployment.
 
-### Opción 2: Con UV (Desarrollo local) ⚡
+### Desarrollo local con UV
 
 ```bash
-# Instalar dependencias y ejecutar
 uv sync
 uv run uvicorn main:app --reload
 ```
 
-**Acceso:** http://localhost:8000
+Acceso: http://localhost:8000
 
-### Opción 3: Con pip tradicional
+### Con pip
 
 ```bash
 pip install -r requirements.txt
 python main.py
 ```
 
-### 📍 URLs de acceso
+## URLs
 
-- **Interfaz Web**: http://localhost:8200 (Docker) o http://localhost:8000 (local)
-- **Documentación API (Swagger)**: `/api/docs`
-- **Documentación API (ReDoc)**: `/api/redoc`
-- **Health Check**: `/health`
+| URL | Descripción |
+|-----|-------------|
+| `/` | Interfaz web |
+| `/api/docs` | Documentación Swagger |
+| `/api/redoc` | Documentación ReDoc |
+| `/health` | Health check |
 
-## 📁 Estructura del Proyecto
+## API Endpoints
 
-```
-control_horario/
-├── main.py                  # Aplicación principal FastAPI
-├── requirements.txt         # Dependencias del proyecto
-├── control_horario.db       # Base de datos SQLite (se crea automáticamente)
-│
-├── database/               # Capa de base de datos
-│   ├── __init__.py
-│   ├── connection.py       # Configuración de conexión
-│   └── models.py           # Modelos SQLAlchemy
-│
-├── schemas/                # Validación de datos (Pydantic)
-│   ├── __init__.py
-│   └── marca.py            # Schemas de marcas
-│
-├── services/               # Lógica de negocio
-│   ├── __init__.py
-│   └── marca_service.py    # Servicio de marcas
-│
-├── routers/                # Endpoints de la API
-│   ├── __init__.py
-│   └── marcas.py           # Router de marcas
-│
-├── static/                 # Archivos estáticos
-│   ├── css/
-│   │   └── style.css       # Estilos CSS
-│   └── js/
-│       └── app.js          # JavaScript frontend
-│
-└── templates/              # Templates HTML
-    └── index.html          # Interfaz principal
-```
-
-## 🔌 API Endpoints
-
-### Marcas
+### Marcas (`/api/marcas`)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/api/marcas` | Crear nueva marca |
-| GET | `/api/marcas` | Listar todas las marcas |
-| GET | `/api/marcas/{id}` | Obtener marca específica |
+| POST | `/api/marcas` | Crear marca |
+| GET | `/api/marcas` | Listar marcas |
+| GET | `/api/marcas/{id}` | Obtener marca |
 | PUT | `/api/marcas/{id}` | Actualizar marca |
 | DELETE | `/api/marcas/{id}` | Eliminar marca |
 | GET | `/api/marcas/fecha/{fecha}` | Marcas de una fecha |
-| GET | `/api/marcas/agrupadas` | Marcas agrupadas por día |
-| GET | `/api/marcas/estadisticas/semana` | Estadísticas de la semana actual |
+| GET | `/api/marcas/agrupadas` | Marcas agrupadas por día (acepta `fecha_desde` y `fecha_hasta`) |
+| GET | `/api/marcas/estadisticas/semana` | Estadísticas semanales (acepta `fecha`) |
+| GET | `/api/marcas/estadisticas/mes` | Estadísticas mensuales (acepta `fecha`) |
+| GET | `/api/marcas/art15/saldo/{año}/{mes}` | Saldo de Art. 15 del mes |
 
-| GET | `/api/marcas/estadisticas/semana?fecha=2026-04-10` | Estadísticas de cualquier semana |
-| GET | `/api/marcas/estadisticas/mes` | Estadísticas del mes |
+### Feriados (`/api/feriados`)
 
-### Ejemplo de uso
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/api/feriados` | Crear feriado |
+| GET | `/api/feriados` | Listar feriados del año actual |
+| GET | `/api/feriados/año/{año}` | Feriados de un año |
+| GET | `/api/feriados/{id}` | Obtener feriado |
+| PUT | `/api/feriados/{id}` | Actualizar feriado |
+| DELETE | `/api/feriados/{id}` | Eliminar feriado |
+| POST | `/api/feriados/precargar/{año}` | Precargar feriados de Uruguay para un año |
+| GET | `/api/feriados/verificar/{fecha}` | Verificar si una fecha es feriado |
 
-**Crear marca:**
-```bash
-curl -X POST "http://localhost:8000/api/marcas" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fecha": "2026-04-10",
-    "tipo": "ENTRADA",
-    "hora": "08:30:00",
-    "observacion": "Llegada normal"
-  }'
-```
+## Modelo de datos
 
-**Listar marcas agrupadas:**
-```bash
-curl "http://localhost:8000/api/marcas/agrupadas"
-```
-
-## 💾 Modelo de Datos
-
-### Tabla: `marcas`
+### Tabla `marcas`
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | id | Integer | ID único (autoincremental) |
 | fecha | Date | Fecha de la marca |
-| tipo | String | 'ENTRADA' o 'SALIDA' |
-| hora | Time | Hora de la marca |
-| observacion | String | Nota opcional (max 500 chars) |
-| created_at | DateTime | Fecha de creación del registro |
+| tipo | String | `ENTRADA`, `SALIDA` o `ART15` |
+| hora | Time | Hora de la marca (nullable para ART15) |
+| horas_art15 | Integer | Horas del Art. 15 en **minutos** (ej: 90 = 1.5 h) |
+| observacion | String | Nota opcional (máx. 500 chars) |
+| created_at | DateTime | Fecha de creación |
 | updated_at | DateTime | Fecha de última actualización |
 
-## 🎯 Próximas Funcionalidades (Roadmap)
+### Tabla `feriados`
 
-- [ ] Importación de datos desde PDF/TXT
-- [ ] Gestión de licencias y días no trabajados
-- [ ] Reportes mensuales con estadísticas
-- [ ] Exportación a Excel/PDF
-- [ ] Gestión de múltiples usuarios
-- [ ] Dashboard con gráficos
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | Integer | ID único (autoincremental) |
+| nombre | String | Nombre del feriado |
+| fecha | Date | Fecha efectiva del feriado |
+| tipo | String | `FIJO` o `MOVIL` |
+| se_repite_anualmente | Boolean | True para feriados fijos |
+| observacion | String | Nota opcional |
 
-## 🛠️ Tecnologías Utilizadas
+## Reglas de negocio
 
-- **Backend**: FastAPI 0.115.0
-- **ORM**: SQLAlchemy 2.0.35
-- **Validación**: Pydantic 2.9.2
-- **Base de Datos**: SQLite
-- **Frontend**: HTML5 + CSS3 + JavaScript vanilla
-- **Servidor**: Uvicorn
+- **Horas semanales requeridas:** 43 horas (lunes a domingo)
+- **Ajuste por feriado:** se descuentan 8 h 36 min (516 min) por cada feriado que caiga en día laborable (lun–vie)
+- **Tope diario:** 10 horas máximo por día en el cálculo de totales
+- **Art. 15:** cuota mensual de 4 horas; los valores válidos al registrar son 1, 1.5, 2, 2.5, 3 y 4 horas
+- **Feriados móviles trasladables:** se guardan con la fecha efectiva (lunes resultante del traslado según la regla uruguaya)
 
-## 📝 Notas
+## Tecnologías
 
-- La base de datos SQLite (`control_horario.db`) se crea automáticamente en la primera ejecución
-- El servidor corre en modo desarrollo con auto-reload activado
-- Los datos se persisten localmente, no requiere configuración adicional
-- La interfaz es responsive y funciona en dispositivos móviles
-
-## 🤝 Contribuciones
-
-Este es un proyecto personal. Si encontrás bugs o tenés sugerencias, podés crear un issue o pull request.
-
-## 📄 Licencia
-
-Proyecto de uso personal para control horario en UdelaR.
-
----
-
-Desarrollado con ❤️ para facilitar el control de asistencia
+- **Backend:** FastAPI + Uvicorn
+- **ORM:** SQLAlchemy 2.x
+- **Validación:** Pydantic 2.x
+- **Base de datos:** SQLite
+- **Frontend:** HTML5 + CSS3 + JavaScript vanilla
