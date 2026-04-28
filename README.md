@@ -1,3 +1,5 @@
+# Bienvenidos
+
 # Control Horario UdelaR
 
 Sistema de registro y control de marcas horarias (entradas y salidas) desarrollado con FastAPI y SQLite.
