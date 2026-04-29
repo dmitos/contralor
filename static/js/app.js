@@ -638,10 +638,16 @@ function calcularProyeccionSalida() {
     const feriadosFuturos = (stats.feriados?.fechas || []).filter(f => f.fecha >= hoy).length;
     const diasRestantes = Math.max(1, diasBaseRestantes - feriadosFuturos);
 
+    // Las horas de Art.15 de la semana se aplican íntegramente a hoy, no se
+    // distribuyen entre días restantes. Fórmula: (faltantes + art15) / dias - art15
+    const art15SemanaMin = Math.round(stats.art15_semana_minutos || 0);
+
     let salidaSemanalMin = null;
     if (faltantesMin > 0) {
-        const horasHoyMin = Math.min(Math.round(faltantesMin / diasRestantes), 600);
-        salidaSemanalMin = entradaMin + horasHoyMin;
+        const rawHorasHoyMin = Math.round((faltantesMin + art15SemanaMin) / diasRestantes) - art15SemanaMin;
+        if (rawHorasHoyMin > 0) {
+            salidaSemanalMin = entradaMin + Math.min(rawHorasHoyMin, 600);
+        }
     }
 
     return {
@@ -653,7 +659,7 @@ function calcularProyeccionSalida() {
         salidaSemanal: salidaSemanalMin !== null ? minToHHMM(salidaSemanalMin) : null,
         faltantesMin,
         diasRestantes,
-        semanaCompletada: faltantesMin <= 0
+        semanaCompletada: faltantesMin <= 0 || salidaSemanalMin === null
     };
 }
 
@@ -721,3 +727,10 @@ window.cambiarSemana = cambiarSemana;
 window.irSemanaActual = irSemanaActual;
 window.irSemanaEspecifica = irSemanaEspecifica;
 window.toggleCamposSegunTipo = toggleCamposSegunTipo;
+
+// Registrar Service Worker para PWA
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}

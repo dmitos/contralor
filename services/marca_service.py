@@ -350,10 +350,11 @@ class MarcaService:
                 marcas_por_dia[marca.fecha] = []
             marcas_por_dia[marca.fecha].append(marca)
         
-        # Calcular total de segundos trabajados
+        # Calcular total de segundos trabajados y minutos de Art.15 en la semana
         total_segundos = 0
         dias_trabajados = 0
-        
+        art15_semana_minutos = 0
+
         for fecha, marcas_dia in marcas_por_dia.items():
             horas_dia = MarcaService.calcular_horas_dia(marcas_dia)
             if horas_dia != "00:00":
@@ -361,6 +362,9 @@ class MarcaService:
                 partes = horas_dia.split(":")
                 segundos_dia = int(partes[0]) * 3600 + int(partes[1]) * 60
                 total_segundos += segundos_dia
+            for marca in marcas_dia:
+                if marca.tipo == "ART15" and marca.horas_art15:
+                    art15_semana_minutos += marca.horas_art15  # almacenado en minutos
         
         # Convertir a horas decimales
         horas_decimales = total_segundos / 3600
@@ -419,7 +423,8 @@ class MarcaService:
                 'fechas': [{'fecha': f.fecha, 'nombre': f.nombre} for f in feriados_laborables],
                 'ajuste_horas': round(ajuste_feriados_minutos / 60, 2)
             },
-            'art15': saldo_art15
+            'art15': saldo_art15,
+            'art15_semana_minutos': art15_semana_minutos
         }
     
     @staticmethod
