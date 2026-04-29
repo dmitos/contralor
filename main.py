@@ -11,7 +11,7 @@ Para ejecutar:
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db
@@ -41,6 +41,12 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Configurar templates Jinja2
 templates = Jinja2Templates(directory="templates")
 
+# Service Worker en la raíz para que su scope cubra toda la app
+@app.get("/sw.js", include_in_schema=False)
+async def service_worker():
+    return FileResponse("static/sw.js", headers={"Service-Worker-Allowed": "/"})
+
+
 # Registrar routers
 app.include_router(marcas_router)
 app.include_router(feriados_router)
@@ -68,7 +74,7 @@ async def index(request: Request):
     Returns:
         Template HTML renderizado
     """
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 @app.get("/health")

@@ -58,7 +58,7 @@ wheels = [
 [[package]]
 name = "control-horario"
 version = "1.0.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "jinja2" },
