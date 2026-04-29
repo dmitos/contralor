@@ -1,4 +1,4 @@
-const CACHE_NAME = "control-horario-v1";
+const CACHE_NAME = "control-horario-v3";
 
 const STATIC_ASSETS = [
   "/",

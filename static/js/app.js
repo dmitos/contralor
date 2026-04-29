@@ -638,13 +638,13 @@ function calcularProyeccionSalida() {
     const feriadosFuturos = (stats.feriados?.fechas || []).filter(f => f.fecha >= hoy).length;
     const diasRestantes = Math.max(1, diasBaseRestantes - feriadosFuturos);
 
-    // Las horas de Art.15 de la semana se aplican íntegramente a hoy, no se
-    // distribuyen entre días restantes. Fórmula: (faltantes + art15) / dias - art15
-    const art15SemanaMin = Math.round(stats.art15_semana_minutos || 0);
-
+    // Horas que debés trabajar hoy para estar exactamente al día al cierre de
+    // esta jornada, asumiendo que los días restantes cubrirán cada uno su
+    // jornada diaria estándar. Esto aplica Art.15 íntegramente a hoy (ya
+    // descontado en faltantesMin vía horas_trabajadas_decimal).
     let salidaSemanalMin = null;
     if (faltantesMin > 0) {
-        const rawHorasHoyMin = Math.round((faltantesMin + art15SemanaMin) / diasRestantes) - art15SemanaMin;
+        const rawHorasHoyMin = faltantesMin - (diasRestantes - 1) * jornadaDiariaMin;
         if (rawHorasHoyMin > 0) {
             salidaSemanalMin = entradaMin + Math.min(rawHorasHoyMin, 600);
         }
