@@ -15,8 +15,8 @@ services:
       # - ./routers:/app/routers
       # - ./schemas:/app/schemas
       # - ./services:/app/services
-      # - ./static:/app/static
-      # - ./templates:/app/templates
+      - ./static:/app/static
+      - ./templates:/app/templates
     environment:
       - TZ=America/Montevideo
     restart: unless-stopped

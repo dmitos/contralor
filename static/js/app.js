@@ -202,48 +202,32 @@ async function cargarMarcasAgrupadas() {
 }
 
 /**
- * Renderiza la tabla de marcas agrupadas por día
+ * Renderiza el historial de marcas agrupadas por día como bloques/cards
  */
 function renderizarMarcasAgrupadas() {
-    const tbody = document.getElementById('listaMarcas');
-    
+    const lista = document.getElementById('listaMarcas');
+
     if (state.marcasAgrupadas.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="empty-state">
-                    <div class="empty-state-icon">📋</div>
-                    <p>No hay marcas registradas</p>
-                    <p style="font-size: 0.875rem; margin-top: 0.5rem;">
-                        Comienza registrando tu primera entrada o salida
-                    </p>
-                </td>
-            </tr>
+        lista.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <p>No hay marcas registradas</p>
+                <p style="font-size: 0.875rem; margin-top: 0.5rem;">
+                    Comienza registrando tu primera entrada o salida
+                </p>
+            </div>
         `;
         renderizarProyeccionSalida();
         return;
     }
-    
-    tbody.innerHTML = '';
-    
-    state.marcasAgrupadas.forEach(dia => {
-        // Fila de fecha (header del día)
-        const fechaRow = document.createElement('tr');
-        fechaRow.style.backgroundColor = '#f1f5f9';
-        fechaRow.innerHTML = `
-            <td colspan="6" style="font-weight: 600; padding: 0.875rem;">
-                📅 ${formatearFecha(dia.fecha)} 
-                <span style="color: #64748b; font-weight: 400; margin-left: 1rem;">
-                    Total: ${dia.total_horas || '00:00'}
-                </span>
-            </td>
-        `;
-        tbody.appendChild(fechaRow);
-        
-        // Filas de marcas del día
-        dia.marcas.forEach(marca => {
-            const row = document.createElement('tr');
 
-            // Determinar icono y badge según tipo
+    lista.innerHTML = '';
+
+    state.marcasAgrupadas.forEach(dia => {
+        const diaCard = document.createElement('div');
+        diaCard.className = 'dia-card';
+
+        const marcasHtml = dia.marcas.map(marca => {
             let badgeClass, icono, textoTipo, contenidoHora;
             if (marca.tipo === 'ENTRADA') {
                 badgeClass = 'badge-entrada';
@@ -255,7 +239,7 @@ function renderizarMarcasAgrupadas() {
                 icono = '🔴';
                 textoTipo = 'SALIDA';
                 contenidoHora = formatearHora(marca.hora);
-            } else if (marca.tipo === 'ART15') {
+            } else {
                 badgeClass = 'badge-art15';
                 icono = '⏰';
                 textoTipo = 'ART. 15';
@@ -263,38 +247,28 @@ function renderizarMarcasAgrupadas() {
                 contenidoHora = `${formatearHora(marca.hora)} (${horasDecimal}h)`;
             }
 
-            row.innerHTML = `
-                <td></td>
-                <td>
-                    <span class="badge ${badgeClass}">
-                        ${icono} ${textoTipo}
-                    </span>
-                </td>
-                <td style="font-weight: 500;">${contenidoHora}</td>
-                <td style="color: #64748b; font-size: 0.8125rem;">
-                    ${marca.observacion || '-'}
-                </td>
-                <td style="font-size: 0.75rem; color: #94a3b8;">
-                    ${formatearDateTime(marca.created_at)}
-                </td>
-                <td>
-                    <button
-                        onclick="editarMarca(${marca.id})"
-                        class="btn btn-primary btn-small"
-                        title="Editar">
-                        ✏️
-                    </button>
-                    <button
-                        onclick="eliminarMarca(${marca.id})"
-                        class="btn btn-danger btn-small"
-                        title="Eliminar"
-                        style="margin-left: 0.5rem;">
-                        🗑️
-                    </button>
-                </td>
+            return `
+                <div class="marca-fila">
+                    <span class="badge ${badgeClass}">${icono} ${textoTipo}</span>
+                    <span class="marca-hora">${contenidoHora}</span>
+                    <span class="marca-obs">${marca.observacion || '-'}</span>
+                    <span class="marca-registrado">${formatearDateTime(marca.created_at)}</span>
+                    <div class="marca-acciones">
+                        <button onclick="editarMarca(${marca.id})" class="btn btn-primary btn-small" title="Editar">✏️</button>
+                        <button onclick="eliminarMarca(${marca.id})" class="btn btn-danger btn-small" title="Eliminar">🗑️</button>
+                    </div>
+                </div>
             `;
-            tbody.appendChild(row);
-        });
+        }).join('');
+
+        diaCard.innerHTML = `
+            <div class="dia-card-header">
+                <span class="dia-card-fecha">📅 ${formatearFecha(dia.fecha)}</span>
+                <span class="dia-card-total">⏱ ${dia.total_horas || '00:00'}</span>
+            </div>
+            ${marcasHtml}
+        `;
+        lista.appendChild(diaCard);
     });
 
     renderizarProyeccionSalida();
